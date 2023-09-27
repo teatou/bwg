@@ -41,15 +41,19 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/add_ticker", add.New(storage))
-	r.Get("/fetch", fetch.New(storage))
+	r.Post("/add_ticker", add.New(storage, logger))
+	r.Get("/fetch", fetch.New(storage, logger))
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("localhost:%d", cfg.Server.Port),
 		Handler: r,
 	}
 
+	logger.Infof("starting server on port: %d", cfg.Server.Port)
+
 	if err := srv.ListenAndServe(); err != nil {
-		panic("failed to start server")
+		logger.Errorf("failed to start server")
 	}
+
+	logger.Errorf("server stopped")
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
+	"github.com/teatou/bwg/pkg/mylogger"
 )
 
 type TickerAdder interface {
@@ -23,12 +24,13 @@ type RequestAdd struct {
 	Ticker string `json:"ticker"`
 }
 
-func New(tickerAdder TickerAdder) http.HandlerFunc {
+func New(tickerAdder TickerAdder, logger mylogger.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req RequestAdd
 
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
+			logger.With("path", r.URL.Path).Errorf("error decoding req body: %v", err)
 			render.JSON(w, r, fmt.Errorf("invalid request"))
 			return
 		}
@@ -36,21 +38,22 @@ func New(tickerAdder TickerAdder) http.HandlerFunc {
 		url := "https://api.binance.com/api/v3/ticker/24hr"
 		resp, err := http.Get(url)
 		if err != nil {
+			logger.With("path", r.URL.Path).Errorf("error req from binance api: %v", err)
 			render.JSON(w, r, fmt.Errorf("invalid request"))
-
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			logger.With("path", r.URL.Path).Errorf("binance api status not ok: %v", err)
 			render.JSON(w, r, fmt.Errorf("invalid request"))
-
 			return
 		}
 
 		var body []ApiAddBody
 		err = json.NewDecoder(r.Body).Decode(&body)
 		if err != nil {
+			logger.With("path", r.URL.Path).Errorf("error decoding binance body: %v", err)
 			render.JSON(w, r, fmt.Errorf("invalid request"))
 			return
 		}
@@ -59,11 +62,12 @@ func New(tickerAdder TickerAdder) http.HandlerFunc {
 			if b.Ticker == req.Ticker {
 				err = tickerAdder.AddTicker(b.Ticker, b.Difference, b.Price)
 				if err != nil {
+					logger.With("path", r.URL.Path).Errorf("error adding ticker: %v", err)
 					render.JSON(w, r, fmt.Errorf("invalid request"))
-
 					return
 				}
 
+				logger.With("path", r.URL.Path).Infof("success adding ticker: %v", err)
 				render.JSON(w, r, Response{
 					Status: "OK",
 					Error:  "",
@@ -71,6 +75,7 @@ func New(tickerAdder TickerAdder) http.HandlerFunc {
 			}
 		}
 
+		logger.With("path", r.URL.Path).Errorf("error?: %v", err)
 		render.JSON(w, r, fmt.Errorf("invalid request"))
 	}
 }
