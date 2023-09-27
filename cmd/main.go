@@ -42,7 +42,7 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Post("/add_ticker", add.New(storage, logger))
-	r.Get("/fetch", fetch.New(storage, logger))
+	r.Get("/fetch/{ticker}-{date}", fetch.New(storage, logger))
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("localhost:%d", cfg.Server.Port),

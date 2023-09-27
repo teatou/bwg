@@ -23,7 +23,7 @@ func New(fetcher Fetcher, logger mylogger.Logger) http.HandlerFunc {
 			return
 		}
 
-		dateString := chi.URLParam(r, "alias")
+		dateString := chi.URLParam(r, "date")
 		if dateString == "" {
 			logger.With("path", r.URL.Path).Errorf("error decoding query param 2")
 			render.JSON(w, r, fmt.Errorf("invalid request"))
