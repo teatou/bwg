@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  bwg-app:
+    restart: always
+    build: ./
+    command: /app/cmd/main
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      CONFIG: config/local.yaml
+
+  db:
+    restart: always
+    image: postgres:latest
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5436"
