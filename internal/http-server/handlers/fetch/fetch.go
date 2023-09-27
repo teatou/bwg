@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/teatou/bwg/internal/storage/postgresql"
 )
@@ -12,22 +13,21 @@ type Fetcher interface {
 	FetchParams(ticker, dateString string) (postgresql.FetchBody, error)
 }
 
-type RequestFetch struct {
-	Ticker     string `json:"ticker"`
-	DateString string `json:"date"`
-}
-
 func New(fetcher Fetcher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req RequestFetch
-
-		err := render.DecodeJSON(r.Body, &req)
-		if err != nil {
+		ticker := chi.URLParam(r, "ticker")
+		if ticker == "" {
 			render.JSON(w, r, fmt.Errorf("invalid request"))
 			return
 		}
 
-		body, err := fetcher.FetchParams(req.Ticker, req.DateString)
+		dateString := chi.URLParam(r, "alias")
+		if dateString == "" {
+			render.JSON(w, r, fmt.Errorf("invalid request"))
+			return
+		}
+
+		body, err := fetcher.FetchParams(ticker, dateString)
 		if err != nil {
 			render.JSON(w, r, fmt.Errorf("invalid request"))
 			return
