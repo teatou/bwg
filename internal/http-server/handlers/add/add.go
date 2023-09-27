@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
 
@@ -20,13 +19,17 @@ type ApiAddBody struct {
 	Difference float64 `json:"priceChangePercent"`
 }
 
+type RequestAdd struct {
+	Ticker string `json:"ticker"`
+}
+
 func New(tickerAdder TickerAdder) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ticker := chi.URLParam(r, "ticker")
-		if ticker == "" {
+		var req RequestAdd
 
+		err := render.DecodeJSON(r.Body, &req)
+		if err != nil {
 			render.JSON(w, r, fmt.Errorf("invalid request"))
-
 			return
 		}
 
@@ -45,25 +48,30 @@ func New(tickerAdder TickerAdder) http.HandlerFunc {
 			return
 		}
 
-		var body ApiAddBody
+		var body []ApiAddBody
 		err = json.NewDecoder(r.Body).Decode(&body)
 		if err != nil {
 			render.JSON(w, r, fmt.Errorf("invalid request"))
-
 			return
 		}
 
-		err = tickerAdder.AddTicker(body.Ticker, body.Difference, body.Price)
-		if err != nil {
-			render.JSON(w, r, fmt.Errorf("invalid request"))
+		for _, b := range body {
+			if b.Ticker == req.Ticker {
+				err = tickerAdder.AddTicker(b.Ticker, b.Difference, b.Price)
+				if err != nil {
+					render.JSON(w, r, fmt.Errorf("invalid request"))
 
-			return
+					return
+				}
+
+				render.JSON(w, r, Response{
+					Status: "OK",
+					Error:  "",
+				})
+			}
 		}
 
-		render.JSON(w, r, Response{
-			Status: "OK",
-			Error:  "",
-		})
+		render.JSON(w, r, fmt.Errorf("invalid request"))
 	}
 }
 
